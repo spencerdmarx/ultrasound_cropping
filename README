@@ -12,10 +12,21 @@ A toolkit for processing ultrasound videos with background removal and intellige
 
 ## Examples
 
-![Cropping Example 1](examples/image_crop_ex_1.png)
-![Cropping Example 2](examples/image_crop_ex_2.png)
-
-[View video cropping example](examples/video_crop_ex_1.mp4)
+<div align="center">
+  <img src="examples/image_crop_ex_1.png" alt="Cropping Example 1" width="400"/>
+  <p><em>Example 1: Ultrasound image before and after cropping</em></p>
+  
+  <img src="examples/image_crop_ex_2.png" alt="Cropping Example 2" width="400"/>
+  <p><em>Example 2: Another ultrasound cropping demonstration</em></p>
+  
+  <p>
+    <a href="examples/video_crop_ex_1.mp4">
+      <img src="examples/image_crop_ex_1.png" alt="Video Example Thumbnail" width="400"/>
+    </a>
+    <br>
+    <em>Click the image above to view video cropping example</em>
+  </p>
+</div>
 
 ## Installation
 
