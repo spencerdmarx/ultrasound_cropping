@@ -349,61 +349,6 @@ def crop_image_to_contour_box(image: cv2.typing.MatLike, contour: cv2.typing.Mat
 
 
 
-# MARK: Background Removal
-
-
-
-def remove_background(
-    image: str | cv2.typing.MatLike, 
-    erosion_iterations = 5, 
-    dilation_iterations = 5, 
-    display_removal: bool = False
-) -> tuple[cv2.typing.MatLike, cv2.typing.MatLike]:
-    """
-    This function takes in a raw image (either as path or cv2 image) and removes and crops the background.
-    It does this by thresholding, then eroding a given number of times, then dilating a given number of times, 
-    then finding the biggest contour and drawing a rectangle around it as the crop zone.
-    """
-    # Handle input as either path or image
-    if isinstance(image, str):
-        raw_image = read_image(image)
-    else:
-        raw_image = image
-
-    outlier_removed_image = remove_outlier_intensities(image = raw_image, show_intensity_histogram = False)
-    binary_image = get_binary_image(outlier_removed_image)
-    closed_image = close_image(binary_image = binary_image)
-    eroded_image = erode_image(binary_image = closed_image, iterations = erosion_iterations)
-    dilated_image = dilate_image(binary_image = eroded_image, iterations = dilation_iterations)
-    largest_contour = get_largest_contour(dilated_image)
-    convex_contour = make_contour_convex(contour = largest_contour)
-
-    # Crop the image to the contour bounding box
-    cropped_image, cropping_box = crop_image_to_contour_box(raw_image, convex_contour)
-
-    # Display removal process if requested
-    if display_removal:
-        contour_overlayed_image = get_contour_overlayed_image(largest_contour, raw_image)
-        convex_contour_overlayed_image = get_contour_overlayed_image(contour = convex_contour, image = raw_image)
-        display_background_removal(
-            raw_image = raw_image, 
-            outlier_removed_image = outlier_removed_image, 
-            binary_image = binary_image, 
-            closed_image = closed_image, 
-            eroded_image = eroded_image, 
-            dilated_image = dilated_image, 
-            contour_overlayed_image = contour_overlayed_image, 
-            convex_contour_overlayed_image = convex_contour_overlayed_image, 
-            final_image = cropped_image
-        )
-
-    return cropped_image, cropping_box
-
-
-
-
-
-
 # MARK: Visualization and Display
 
 
@@ -485,33 +430,63 @@ def display_background_removal(raw_image, outlier_removed_image, binary_image, c
 
 
 
-def display_raw_and_background_removed_image(image_paths: list[str]):
+
+
+
+
+# MARK: Background Removal
+
+
+
+def remove_background(
+    image: str | cv2.typing.MatLike, 
+    erosion_iterations = 5, 
+    dilation_iterations = 5, 
+    display_removal: bool = False
+) -> tuple[cv2.typing.MatLike, cv2.typing.MatLike]:
     """
-    This just displays the raw input image and background-removed output image.
-    If a list is passed in, it will display every image in the list.
+    This function takes in a raw image (either as path or cv2 image) and removes and crops the background.
+    It does this by thresholding, then eroding a given number of times, then dilating a given number of times, 
+    then finding the biggest contour and drawing a rectangle around it as the crop zone.
     """
-    if type(image_paths) is str:
-        image_paths = [image_paths]
+    # Handle input as either path or image
+    if isinstance(image, str):
+        raw_image = read_image(image)
+    else:
+        raw_image = image
 
-    num_rows = len(image_paths)
-    num_columns = 2
+    outlier_removed_image = remove_outlier_intensities(image = raw_image, show_intensity_histogram = False)
+    binary_image = get_binary_image(outlier_removed_image)
+    closed_image = close_image(binary_image = binary_image)
+    eroded_image = erode_image(binary_image = closed_image, iterations = erosion_iterations)
+    dilated_image = dilate_image(binary_image = eroded_image, iterations = dilation_iterations)
+    largest_contour = get_largest_contour(dilated_image)
+    convex_contour = make_contour_convex(contour = largest_contour)
 
-    plt.figure(figsize=(14, 9))
+    # Crop the image to the contour bounding box
+    cropped_image, cropping_box = crop_image_to_contour_box(raw_image, convex_contour)
 
-    for x in range(len(image_paths)):
-        raw_image = read_image(image_paths[x])
+    # Display removal process if requested
+    if display_removal:
+        contour_overlayed_image = get_contour_overlayed_image(largest_contour, raw_image)
+        convex_contour_overlayed_image = get_contour_overlayed_image(contour = convex_contour, image = raw_image)
+        display_background_removal(
+            raw_image = raw_image, 
+            outlier_removed_image = outlier_removed_image, 
+            binary_image = binary_image, 
+            closed_image = closed_image, 
+            eroded_image = eroded_image, 
+            dilated_image = dilated_image, 
+            contour_overlayed_image = contour_overlayed_image, 
+            convex_contour_overlayed_image = convex_contour_overlayed_image, 
+            final_image = cropped_image
+        )
 
-        background_removed_image, _ = remove_background(image_path = image_paths[x], image_mask_path = None) 
+    return cropped_image, cropping_box
 
-        plt.subplot(num_rows, num_columns, (2 * x) + 1)
-        plt.axis('off')
-        plt.title('Raw Image ' + str(x + 1))
-        plt.imshow(cv2.cvtColor(raw_image, cv2.COLOR_BGR2RGB))
 
-        plt.subplot(num_rows, num_columns, (2 * (x + 1)))
-        plt.axis('off')
-        plt.title('Final Image ' + str(x + 1))
-        plt.imshow(cv2.cvtColor(background_removed_image, cv2.COLOR_BGR2RGB))
 
-    plt.show()
-
+if __name__ == "__main__":
+    image_path = "/Users/spencermarx/Downloads/Databases-Muscular-DeepACSA-Source A-Data-rectus_images-rectus_img_108.tif"
+    cropped_image, cropping_box = remove_background(image_path, erosion_iterations = 8, dilation_iterations = 8, display_removal = True)
+    print(cropping_box)

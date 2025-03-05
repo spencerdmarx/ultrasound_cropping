@@ -77,7 +77,7 @@ def visualize_crop_boundaries(video_path: str, output_path: str, frame_skip: int
     cap.release()
     out.release()
 
-def process_video(input_path: str, output_path: str, frame_skip: int = 10, crop_edges: bool = True):
+def process_video(input_path: str, output_path: str, frame_skip: int = 10, crop_extra_off_top: bool = True):
     """
     Process a video by cropping it based on content and applying histogram equalization.
     
@@ -85,7 +85,7 @@ def process_video(input_path: str, output_path: str, frame_skip: int = 10, crop_
         input_path: path to the input video
         output_path: path where the processed video will be saved
         frame_skip: process every nth frame for determining crop coordinates
-        crop_edges: whether to crop 10% from top and bottom edges (default: True)
+        crop_extra_off_top: whether to crop 10% from top edge (default: True)
     """
     cap = cv2.VideoCapture(input_path)
     
@@ -122,8 +122,8 @@ def process_video(input_path: str, output_path: str, frame_skip: int = 10, crop_
     median_idx = np.argsort(areas)[len(areas)//2]
     x1, y1, x2, y2 = crop_coords_list[median_idx]
     
-    # Create video writer with the crop dimensions. Reduce height by 10% if crop_edges is True
-    if crop_edges:
+    # Create video writer with the crop dimensions. Reduce height by 10% if crop_extra_off_top is True
+    if crop_extra_off_top:
         y1 += int((y2 - y1) * 0.1)
 
     crop_width = x2 - x1
@@ -178,7 +178,7 @@ def save_video_dimensions(input_path: str, output_path: str, dimensions_file: st
     with open(dimensions_file, 'a') as f:
         f.write(f"{input_path},{in_width}x{in_height},{out_width}x{out_height}\n")
 
-def process_single_video(input_file: Path, output_file: Path, dimensions_file: Path, frame_skip: int, crop_edges: bool):
+def process_single_video(input_file: Path, output_file: Path, dimensions_file: Path, frame_skip: int, crop_extra_off_top: bool):
     """
     Helper function to process a single video file.
     
@@ -187,11 +187,11 @@ def process_single_video(input_file: Path, output_file: Path, dimensions_file: P
         output_file: path to save processed video
         dimensions_file: path to save dimensions
         frame_skip: process every nth frame
-        crop_edges: whether to crop edges
+        crop_extra_off_top: whether to crop extra from top
     """
     print(f"Processing: {input_file}")
     try:
-        process_video(str(input_file), str(output_file), frame_skip, crop_edges)
+        process_video(str(input_file), str(output_file), frame_skip, crop_extra_off_top)
         # Use a lock when writing to the shared dimensions file
         with threading.Lock():
             save_video_dimensions(str(input_file), str(output_file), str(dimensions_file))
@@ -199,7 +199,7 @@ def process_single_video(input_file: Path, output_file: Path, dimensions_file: P
     except Exception as e:
         print(f"Error processing {input_file}: {str(e)}")
 
-def process_video_directory(input_dir: str, output_dir: str, frame_skip: int = 10, crop_edges: bool = True, max_workers: int = 4):
+def process_video_directory(input_dir: str, output_dir: str, frame_skip: int = 10, crop_extra_off_top: bool = True, max_workers: int = 4):
     """
     Process all MP4 files in a directory and its subdirectories using multiple threads.
     
@@ -207,7 +207,7 @@ def process_video_directory(input_dir: str, output_dir: str, frame_skip: int = 1
         input_dir: path to the input directory containing MP4 files
         output_dir: path where the processed videos will be saved
         frame_skip: process every nth frame for determining crop coordinates
-        crop_edges: whether to crop 10% from top and bottom edges (default: True)
+        crop_extra_off_top: whether to crop 10% from top edge (default: True)
         max_workers: maximum number of concurrent threads (default: 4)
     """
     # Convert to Path objects for easier manipulation
@@ -233,34 +233,11 @@ def process_video_directory(input_dir: str, output_dir: str, frame_skip: int = 1
                 output_file = output_subdir / file
                 output_subdir.mkdir(parents=True, exist_ok=True)
                 
-                video_tasks.append((input_file, output_file, dimensions_file, frame_skip, crop_edges))
+                video_tasks.append((input_file, output_file, dimensions_file, frame_skip, crop_extra_off_top))
     
     # Process videos using thread pool
     with ThreadPoolExecutor(max_workers=max_workers) as executor:
         executor.map(lambda x: process_single_video(*x), video_tasks)
-
-def get_frame_count(video_path: str) -> int:
-    """
-    Returns the total number of frames in an MP4 video file.
-    
-    Args:
-        video_path: path to the input video file
-        
-    Returns:
-        int: total number of frames in the video
-        
-    Raises:
-        ValueError: if the video file cannot be opened
-    """
-    cap = cv2.VideoCapture(video_path)
-    
-    if not cap.isOpened():
-        raise ValueError(f"Could not open video file: {video_path}")
-    
-    frame_count = int(cap.get(cv2.CAP_PROP_FRAME_COUNT))
-    cap.release()
-    
-    return frame_count
 
 def analyze_dimension_changes(dimensions_file: str, top_n: int = 50) -> None:
     """
